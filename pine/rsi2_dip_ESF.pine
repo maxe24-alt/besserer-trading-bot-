@@ -1,0 +1,72 @@
+//@version=6
+// ---------------------------------------------------------------------
+// RSI-2 Dip Buy (Connors)
+// Erzeugt vom Python-Backtester - siehe README.
+//
+// Gedacht fuer: CME_MINI:ES1!   Zeiteinheit: 1 Tag (D)
+// Gleiche Bedingungen wie im Python-Lauf: 100000.0 USD Start, 0.1 % Gebuehr je Seite, 1.0 Tick Slippage.
+//
+// Bekannte Abweichungen gegenueber der Python-Engine:
+//   Kontraktstueckelung: TradingView rundet die Positionsgroesse bei Futures auf
+//   ganze Kontrakte, die Python-Engine rechnet mit Bruchteilen. Bei kleinem
+//   Startkapital weichen die Zahlen dadurch sichtbar ab.
+//   Historie: Im TradingView-Gratisplan ist die Zahl der Bars begrenzt, ein
+//   sehr langer Intraday-Test wird dort also kuerzer ausfallen.
+//   Anlaufphase: Supertrend und Ichimoku starten in Pine minimal anders,
+//   das betrifft nur die ersten Bars.
+// ---------------------------------------------------------------------
+
+strategy(
+     title = "RSI-2 Dip Buy (Connors) [backtester]",
+     shorttitle = "RSI-2 Dip Buy",
+     overlay = true,
+     initial_capital = 100000,
+     default_qty_type = strategy.percent_of_equity,
+     default_qty_value = 100.0,
+     commission_type = strategy.commission.percent,
+     commission_value = 0.1,
+     slippage = 1,
+     pyramiding = 0,
+     process_orders_on_close = false,
+     calc_on_every_tick = false,
+     currency = currency.USD)
+
+// --- Zeitfenster -----------------------------------------------------
+startDate = input.time(timestamp("01 Jan 2015 00:00 +0000"), "Backtest ab", group="Zeitraum")
+endDate = input.time(timestamp("01 Sep 2026 00:00 +0000"), "Backtest bis", group="Zeitraum")
+inWindow = time >= startDate and time <= endDate
+
+// --- Parameter -------------------------------------------------------
+rsiLen = input.int(2, "RSI-Laenge", minval=2, group="Strategie")
+entryLevel = input.int(10, "Einstieg RSI", minval=1, maxval=49, group="Strategie")
+trendLen = input.int(200, "Trendfilter SMA", minval=20, group="Strategie")
+exitSmaLen = input.int(5, "Ausstieg SMA", minval=2, group="Strategie")
+
+// --- Indikatoren -----------------------------------------------------
+rsiValue = ta.rsi(close, rsiLen)
+trendSma = ta.sma(close, trendLen)
+exitSma = ta.sma(close, exitSmaLen)
+
+// --- Regeln ----------------------------------------------------------
+longEntry = close > trendSma and rsiValue < entryLevel
+longExit = close > exitSma or close < trendSma
+
+// --- Orders ----------------------------------------------------------
+// Pine fuellt Orders zur Eroeffnung der naechsten Bar - genau wie die
+// Python-Engine. Der Ausstieg wird zuerst geprueft, damit an einer Bar
+// mit beiden Signalen nicht sofort neu eingestiegen wird.
+if inWindow
+    if longExit and strategy.position_size > 0
+        strategy.close("Long", comment="Ausstieg")
+    if longEntry and strategy.position_size <= 0
+        strategy.entry("Long", strategy.long)
+
+// Nach dem Zeitfenster wird glattgestellt.
+if not inWindow and strategy.position_size != 0
+    strategy.close_all(comment="Zeitfenster Ende")
+
+// --- Darstellung -----------------------------------------------------
+plot(trendSma, "Trend-SMA", color=color.new(#f0b232, 0), linewidth=2)
+plot(exitSma, "Ausstiegs-SMA", color=color.new(#5ce1a6, 0))
+
+bgcolor(strategy.position_size > 0 ? color.new(#5ce1a6, 92) : na, title="Im Markt")

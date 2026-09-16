@@ -1,0 +1,7 @@
+# Das Nötigste - mehr braucht der Backtester nicht.
+pandas>=2.0
+numpy>=1.24
+requests>=2.28
+
+# Dashboard und CLI laufen mit der Standardbibliothek (http.server, argparse).
+# Kein Flask, kein FastAPI, kein Chart-Framework.

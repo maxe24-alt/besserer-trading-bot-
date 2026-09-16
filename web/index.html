@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Der Gauntlet - Strategie-Backtester</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div>
+    <h1>DER GAUNTLET</h1>
+    <p class="subtitle" id="subtitle">STRATEGIEN vs <span id="subtitle-symbol">ES</span></p>
+  </div>
+  <dl class="run-meta" id="run-meta">
+    <div><dt>Markt</dt><dd id="meta-symbol">-</dd></div>
+    <div><dt>Zeitraum</dt><dd id="meta-range">-</dd></div>
+    <div><dt>Bedingungen</dt><dd id="meta-costs">-</dd></div>
+  </dl>
+</header>
+
+<main>
+  <!-- ---------- Steuerung ---------- -->
+  <section class="panel controls" aria-label="Einstellungen">
+    <form id="settings" autocomplete="off">
+      <div class="control-row">
+        <label class="field">
+          <span>Markt</span>
+          <select id="symbol" name="symbol"></select>
+        </label>
+        <label class="field">
+          <span>Zeiteinheit</span>
+          <select id="interval" name="interval"></select>
+        </label>
+        <label class="field">
+          <span>Von</span>
+          <input type="date" id="start" name="start" value="2015-01-01">
+        </label>
+        <label class="field">
+          <span>Bis</span>
+          <input type="date" id="end" name="end">
+        </label>
+        <label class="field">
+          <span>Datenquelle</span>
+          <select id="provider" name="provider"></select>
+        </label>
+      </div>
+
+      <div class="control-row">
+        <label class="field narrow">
+          <span>Startkapital $</span>
+          <input type="number" id="capital" value="100000" min="1000" step="1000">
+        </label>
+        <label class="field narrow">
+          <span>Gebühr % / Seite</span>
+          <input type="number" id="fee" value="0.1" min="0" step="0.01">
+        </label>
+        <label class="field narrow">
+          <span>Slippage (Ticks)</span>
+          <input type="number" id="slippage" value="1" min="0" step="1">
+        </label>
+        <label class="field narrow">
+          <span>Einsatz %</span>
+          <input type="number" id="exposure" value="100" min="1" max="100" step="5">
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="allow-short">
+          <span>Short erlauben</span>
+        </label>
+        <button type="submit" class="run-button" id="run-button">Backtest starten</button>
+      </div>
+
+      <fieldset class="strategy-picker">
+        <legend>
+          Strategien
+          <span class="picker-actions">
+            <button type="button" data-select="all">alle</button>
+            <button type="button" data-select="none">keine</button>
+            <button type="button" data-select="trend">nur Trend</button>
+            <button type="button" data-select="mean-reversion">nur Mean Reversion</button>
+          </span>
+        </legend>
+        <div class="strategy-grid" id="strategy-grid"></div>
+      </fieldset>
+    </form>
+    <p class="status" id="status" role="status"></p>
+  </section>
+
+  <!-- ---------- Kennzahlen ---------- -->
+  <section class="tiles" id="tiles" hidden aria-label="Kennzahlen"></section>
+
+  <!-- ---------- Rangliste + Chart ---------- -->
+  <div class="split" id="results" hidden>
+    <section class="panel" aria-labelledby="leaderboard-title">
+      <h2 id="leaderboard-title">Rangliste — Netto P/L</h2>
+      <div class="table-scroll">
+        <table class="leaderboard">
+          <thead>
+            <tr>
+              <th scope="col" class="num">#</th>
+              <th scope="col">Strategie</th>
+              <th scope="col" class="num">Netto P/L</th>
+              <th scope="col" class="num">Rendite</th>
+              <th scope="col" class="num">Max DD</th>
+              <th scope="col" class="num">Trades</th>
+              <th scope="col" class="num">Win %</th>
+              <th scope="col" class="num">PF</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+      <p class="hint">Eine Zeile anklicken, um sie im Chart anzuzeigen.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="chart-title">
+      <h2 id="chart-title">Kapitalkurve — <span id="chart-series-name">Strategie</span> vs. Buy &amp; Hold</h2>
+      <div class="legend" id="chart-legend"></div>
+      <figure class="chart" id="equity-chart"></figure>
+      <h3 class="chart-subtitle">Drawdown der gewählten Strategie</h3>
+      <figure class="chart chart-small" id="drawdown-chart"></figure>
+    </section>
+  </div>
+
+  <!-- ---------- Pine-Export ---------- -->
+  <section class="panel" id="pine-panel" hidden aria-labelledby="pine-title">
+    <h2 id="pine-title">TradingView — Pine Script</h2>
+    <p class="hint">
+      Dieselbe Strategie als Pine-Skript. Im TradingView-Chart auf
+      <code id="pine-symbol">CME_MINI:ES1!</code> den Pine-Editor öffnen, Code einfügen,
+      „Zum Chart hinzufügen“ — der Strategie-Tester rechnet dann mit denselben Regeln.
+    </p>
+    <div class="pine-bar">
+      <select id="pine-strategy"></select>
+      <button type="button" id="pine-copy">Kopieren</button>
+      <button type="button" id="pine-download">Als .pine speichern</button>
+      <span class="status" id="pine-status"></span>
+    </div>
+    <pre class="pine-code" id="pine-code" tabindex="0"></pre>
+  </section>
+</main>
+
+<script src="/js/chart.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

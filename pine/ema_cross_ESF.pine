@@ -1,0 +1,69 @@
+//@version=6
+// ---------------------------------------------------------------------
+// EMA Cross (9/21)
+// Erzeugt vom Python-Backtester - siehe README.
+//
+// Gedacht fuer: CME_MINI:ES1!   Zeiteinheit: 1 Tag (D)
+// Gleiche Bedingungen wie im Python-Lauf: 100000.0 USD Start, 0.1 % Gebuehr je Seite, 1.0 Tick Slippage.
+//
+// Bekannte Abweichungen gegenueber der Python-Engine:
+//   Kontraktstueckelung: TradingView rundet die Positionsgroesse bei Futures auf
+//   ganze Kontrakte, die Python-Engine rechnet mit Bruchteilen. Bei kleinem
+//   Startkapital weichen die Zahlen dadurch sichtbar ab.
+//   Historie: Im TradingView-Gratisplan ist die Zahl der Bars begrenzt, ein
+//   sehr langer Intraday-Test wird dort also kuerzer ausfallen.
+//   Anlaufphase: Supertrend und Ichimoku starten in Pine minimal anders,
+//   das betrifft nur die ersten Bars.
+// ---------------------------------------------------------------------
+
+strategy(
+     title = "EMA Cross (9/21) [backtester]",
+     shorttitle = "EMA Cross",
+     overlay = true,
+     initial_capital = 100000,
+     default_qty_type = strategy.percent_of_equity,
+     default_qty_value = 100.0,
+     commission_type = strategy.commission.percent,
+     commission_value = 0.1,
+     slippage = 1,
+     pyramiding = 0,
+     process_orders_on_close = false,
+     calc_on_every_tick = false,
+     currency = currency.USD)
+
+// --- Zeitfenster -----------------------------------------------------
+startDate = input.time(timestamp("01 Jan 2015 00:00 +0000"), "Backtest ab", group="Zeitraum")
+endDate = input.time(timestamp("01 Sep 2026 00:00 +0000"), "Backtest bis", group="Zeitraum")
+inWindow = time >= startDate and time <= endDate
+
+// --- Parameter -------------------------------------------------------
+fastLen = input.int(9, "Schnelle EMA", minval=2, group="Strategie")
+slowLen = input.int(21, "Langsame EMA", minval=3, group="Strategie")
+
+// --- Indikatoren -----------------------------------------------------
+fastEma = ta.ema(close, fastLen)
+slowEma = ta.ema(close, slowLen)
+
+// --- Regeln ----------------------------------------------------------
+longEntry = fastEma > slowEma
+longExit = slowEma > fastEma
+
+// --- Orders ----------------------------------------------------------
+// Pine fuellt Orders zur Eroeffnung der naechsten Bar - genau wie die
+// Python-Engine. Der Ausstieg wird zuerst geprueft, damit an einer Bar
+// mit beiden Signalen nicht sofort neu eingestiegen wird.
+if inWindow
+    if longExit and strategy.position_size > 0
+        strategy.close("Long", comment="Ausstieg")
+    if longEntry and strategy.position_size <= 0
+        strategy.entry("Long", strategy.long)
+
+// Nach dem Zeitfenster wird glattgestellt.
+if not inWindow and strategy.position_size != 0
+    strategy.close_all(comment="Zeitfenster Ende")
+
+// --- Darstellung -----------------------------------------------------
+plot(fastEma, "EMA schnell", color=color.new(#5ce1a6, 0), linewidth=2)
+plot(slowEma, "EMA langsam", color=color.new(#f0b232, 0), linewidth=2)
+
+bgcolor(strategy.position_size > 0 ? color.new(#5ce1a6, 92) : na, title="Im Markt")

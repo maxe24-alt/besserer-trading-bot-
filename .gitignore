@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Heruntergeladene Marktdaten und eigene Exporte
+data/cache/
+data/csv/
+*.pine.local
+
+# Werkzeuge
+.vscode/
+.idea/
+.DS_Store
