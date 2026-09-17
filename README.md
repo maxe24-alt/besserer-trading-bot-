@@ -13,17 +13,32 @@ Dashboard im Terminal-Look und einem Pine-Script-Export für TradingView.
 
 ---
 
-## Schnellstart
+## Dashboard starten
+
+Einmalig, vom Terminal aus:
 
 ```bash
+git clone https://github.com/maxe24-alt/besserer-trading-bot-.git
+cd besserer-trading-bot-
 pip install -r requirements.txt
+```
 
-python -m backtester dashboard              # Dashboard im Browser
+Und dann jedes Mal:
+
+```bash
+python -m backtester dashboard
+```
+
+Der Browser öffnet sich von selbst auf <http://127.0.0.1:8000>. Beenden mit
+`Strg+C` im Terminal. Alles läuft auf deinem Rechner — nichts geht ins Netz
+außer dem Kursdownload.
+
+Ohne Browser geht es auch:
+
+```bash
 python -m backtester gauntlet --symbol ES   # Rangliste im Terminal
 python -m backtester pine --symbol ES       # Pine-Skripte exportieren
 ```
-
-Das Dashboard läuft danach auf <http://127.0.0.1:8000>.
 
 ---
 
@@ -150,6 +165,7 @@ python -m backtester run <strategie> [...]    # eine Strategie im Detail
 python -m backtester gauntlet [strategien]    # Rangliste
 python -m backtester pine [strategien]        # Pine-Skripte schreiben
 python -m backtester data --symbol ES         # Daten prüfen und exportieren
+python -m backtester ideas                    # Notizen aus dem Dashboard
 python -m backtester dashboard                # Dashboard starten
 ```
 
@@ -180,6 +196,51 @@ python -m backtester run turtle_breakout --symbol MES --contracts 1
 # Stundendaten (Yahoo liefert dafür rund zwei Jahre)
 python -m backtester gauntlet --symbol ES --interval 1h --start 2024-06-01
 ```
+
+---
+
+## Das Notizbuch
+
+Unten im Dashboard steht ein Textfeld. Was dir beim Anschauen eines Ergebnisses
+auffällt, schreibst du dort hinein — die nächste Strategie, eine Idee zur
+Verbesserung, ein Verdacht.
+
+**Der aktuelle Lauf hängt automatisch mit dran**: Markt, Zeiteinheit, Zeitraum,
+die gerade ausgewählte Strategie samt Parametern und ihren Kennzahlen. Genau
+das macht den Unterschied zwischen einer brauchbaren Notiz und einem Zettel,
+der drei Tage später nichts mehr sagt.
+
+Zwei Knöpfe:
+
+* **Notieren** — speichert in `ideen/ideen.md` und `ideen/ideen.json`
+  (`Strg`/`Cmd` + `Enter` tut dasselbe)
+* **Für Claude kopieren** — legt Notiz plus Lauf-Kontext als fertigen Text in
+  die Zwischenablage, den du direkt in den Chat einfügst
+
+Eine kopierte Notiz sieht so aus:
+
+```
+RSI-2 braucht einen ATR-Stop — 95 Trades für 14 % sind zu teuer.
+
+Bezieht sich auf:
+Markt: ES=F · 1d · 2015-01-01 bis 2026-09-01
+Strategie: RSI-2 Dip Buy (Connors) (rsi_length=2, entry_level=10, …)
+Ergebnis: +$14.039 · +14,0 % · Max DD -19,5 % · 95 Trades
+Bedingungen: 100.000 $ Start · 0.1 % je Seite · 1 Tick · nur Long
+```
+
+Erledigte Notizen hakst du ab. Im Terminal:
+
+```bash
+python -m backtester ideas              # alle Notizen
+python -m backtester ideas --open-only  # nur die offenen
+python -m backtester ideas --prompt     # alles als Text zum Weitergeben
+```
+
+Wer die Ideen aus dem Dashboard heraus direkt von einem Modell beantworten
+lassen will, braucht einen API-Schlüssel und damit ein Konto mit Abrechnung.
+Bewusst nicht eingebaut: das Dashboard soll offline und kostenlos laufen. Der
+Weg über die Zwischenablage kostet einen Klick mehr und nichts an Geld.
 
 ---
 
@@ -299,12 +360,13 @@ und den Key in `DEFAULT_ORDER` eintragen, falls er im Gauntlet mitlaufen soll.
 python -m unittest discover -s tests -t .
 ```
 
-122 Tests, komplett offline — synthetische Kursreihen statt Downloads.
+148 Tests, komplett offline — synthetische Kursreihen statt Downloads.
 Geprüft werden unter anderem: dass Buy & Hold exakt der Kursbewegung
 entspricht, dass Einstiege zur Eröffnung der Folgebar erfolgen, dass ein
 Signal auf der letzten Bar keinen Trade mehr auslöst, dass Kennzahlen
 handgerechneten Werten entsprechen und dass jedes Pine-Skript strukturell
-gültig ist.
+gültig ist. Das Notizbuch wird ebenfalls geprüft, unter anderem darauf, dass
+der Browser nur bekannte Felder in die Notizdatei schreiben kann.
 
 ---
 
@@ -315,6 +377,7 @@ backtester/
   instruments.py        Kontraktspezifikationen (Punktwert, Tick, Kommission)
   indicators.py         Indikatoren auf pandas-Basis, ohne TA-Lib
   pine.py               Pine-Script-Generator
+  ideas.py              Notizbuch (ideen/ideen.md und .json)
   cli.py, server.py     Kommandozeile und Dashboard-Server
   data/                 Yahoo, CSV, Stooq, Databento, Alpaca + Cache
   strategies/           Registry, Basisklasse und die 12 Strategien
@@ -322,7 +385,8 @@ backtester/
   report/               Terminal-Ausgabe
 web/                    Dashboard (HTML, CSS, SVG-Charts ohne Bibliothek)
 pine/                   fertig erzeugte Pine-Skripte für ES
-tests/                  122 Tests
+ideen/                  deine Notizen (entsteht beim ersten Speichern)
+tests/                  148 Tests
 ```
 
 ---

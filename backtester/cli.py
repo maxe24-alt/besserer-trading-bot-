@@ -5,6 +5,7 @@
     python -m backtester gauntlet --symbol NQ      Alle gegeneinander
     python -m backtester pine --symbol ES          Pine-Skripte exportieren
     python -m backtester dashboard                 Dashboard im Browser
+    python -m backtester ideas                     Notizen aus dem Dashboard
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from pathlib import Path
 from .data import DataError, load_bars, provider_infos
 from .engine import BacktestConfig, run_backtest, run_gauntlet
 from .engine.results import json_default
+from .ideas import IdeaError, context_lines, load as load_ideas, to_prompt
 from .instruments import known_instruments, resolve
 from .pine import to_pine, tradingview_symbol, write_pine_files
 from .report.terminal import print_detail, print_leaderboard
@@ -187,6 +189,32 @@ def cmd_data(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ideas(args: argparse.Namespace) -> int:
+    entries = load_ideas()
+    if args.open_only:
+        entries = [e for e in entries if e.get("status") != "erledigt"]
+
+    if not entries:
+        print("\n  Noch nichts notiert. Das Notizbuch steht unten im Dashboard.\n")
+        return 0
+
+    if args.prompt:
+        # Alles in einem Block, fertig zum Weitergeben.
+        print("\n\n".join(to_prompt(entry) for entry in entries))
+        return 0
+
+    print()
+    for entry in entries:
+        mark = "x" if entry.get("status") == "erledigt" else " "
+        print(f"  [{mark}] {str(entry.get('created', ''))[:10]}  {entry['id']}")
+        for line in entry.get("text", "").splitlines():
+            print(f"      {line}")
+        for line in context_lines(entry.get("context") or {})[1:]:
+            print(f"      {line.lstrip('> ').rstrip()}")
+        print()
+    return 0
+
+
 def cmd_dashboard(args: argparse.Namespace) -> int:
     from .server import serve
 
@@ -252,6 +280,12 @@ def build_parser() -> argparse.ArgumentParser:
     _add_data_args(data_parser)
     data_parser.set_defaults(func=cmd_data)
 
+    ideas_parser = sub.add_parser("ideas", help="Notizen aus dem Dashboard anzeigen")
+    ideas_parser.add_argument("--open-only", action="store_true", help="nur offene Notizen")
+    ideas_parser.add_argument("--prompt", action="store_true",
+                              help="als fertigen Text zum Weitergeben ausgeben")
+    ideas_parser.set_defaults(func=cmd_ideas)
+
     dash_parser = sub.add_parser("dashboard", help="Das Dashboard im Browser starten")
     dash_parser.add_argument("--host", default="127.0.0.1")
     dash_parser.add_argument("--port", type=int, default=8000)
@@ -268,6 +302,9 @@ def main(argv: list[str] | None = None) -> int:
     except DataError as exc:
         print(f"\n  Datenfehler: {exc}\n", file=sys.stderr)
         return 2
+    except IdeaError as exc:
+        print(f"\n  Fehler: {exc}\n", file=sys.stderr)
+        return 1
     except (KeyError, ValueError) as exc:
         print(f"\n  Fehler: {exc}\n", file=sys.stderr)
         return 1

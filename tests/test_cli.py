@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from backtester import ideas
 from backtester.cli import _config_from_args, _parse_params, build_parser, main
 from tests.helpers import noisy_bars
 
@@ -117,6 +118,48 @@ class CommandTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("Punktwert 50.0 USD", output)
         self.assertIn("CME_MINI:ES1!", output)
+
+
+class IdeasCommandTest(unittest.TestCase):
+    def setUp(self):
+        self.folder = TemporaryDirectory()
+        patcher = patch.object(ideas, "DEFAULT_DIR", Path(self.folder.name))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.addCleanup(self.folder.cleanup)
+
+    def test_says_so_when_there_is_nothing(self):
+        code, output = run_cli(["ideas"])
+        self.assertEqual(code, 0)
+        self.assertIn("Noch nichts notiert", output)
+
+    def test_lists_notes_with_their_context(self):
+        ideas.add("ATR-Stop fuer RSI-2", {
+            "symbol": "ES=F", "interval": "1d",
+            "strategy_label": "RSI-2 Dip Buy (Connors)",
+            "metrics": {"net_pnl": 14039.0, "trades": 95},
+        })
+        code, output = run_cli(["ideas"])
+        self.assertEqual(code, 0)
+        self.assertIn("ATR-Stop fuer RSI-2", output)
+        self.assertIn("RSI-2 Dip Buy (Connors)", output)
+        self.assertIn("ES=F", output)
+
+    def test_open_only_hides_finished_notes(self):
+        done = ideas.add("erledigt", None)
+        ideas.set_status(done["id"], "erledigt")
+        ideas.add("offen", None)
+        code, output = run_cli(["ideas", "--open-only"])
+        self.assertEqual(code, 0)
+        self.assertIn("offen", output)
+        self.assertNotIn("erledigt", output)
+
+    def test_prompt_form_is_plain_text(self):
+        ideas.add("Naechste Strategie: ORB auf NQ", {"symbol": "NQ=F"})
+        code, output = run_cli(["ideas", "--prompt"])
+        self.assertEqual(code, 0)
+        self.assertIn("Naechste Strategie: ORB auf NQ", output)
+        self.assertNotIn("[ ]", output)
 
 
 class ErrorTest(unittest.TestCase):

@@ -254,6 +254,7 @@
 
     $("pine-strategy").value = key;
     loadPine(key);
+    renderIdeaContext();
   }
 
   /* ---------- Pine ---------- */
@@ -278,6 +279,195 @@
       code.textContent = "";
       pineStatus.textContent = error.message;
       pineStatus.classList.add("error");
+    }
+  }
+
+  /* ---------- Notizbuch ---------- */
+  /* Das Dashboard laeuft lokal, ohne Netz und ohne API-Schluessel. Eine
+     Notiz wird deshalb gespeichert, nicht verschickt - und per Klick als
+     fertiger Text in die Zwischenablage gelegt, den man Claude gibt. */
+
+  function currentContext() {
+    const settings = readSettings();
+    const result = state.selectedKey ? findResult(state.selectedKey) : null;
+    const context = {
+      symbol: settings.symbol,
+      interval: settings.interval,
+      start: settings.start,
+      end: settings.end || new Date().toISOString().slice(0, 10),
+      provider: settings.provider,
+      settings: {
+        capital: settings.capital,
+        fee: settings.fee,
+        slippage: settings.slippage,
+        exposure: settings.exposure,
+        allow_short: settings.allow_short,
+      },
+    };
+    if (result) {
+      context.strategy = result.key;
+      context.strategy_label = result.label;
+      context.params = result.params;
+      context.metrics = {
+        net_pnl: result.metrics.net_pnl,
+        return_pct: result.metrics.return_pct,
+        max_drawdown_pct: result.metrics.max_drawdown_pct,
+        trades: result.metrics.trades,
+        win_rate_pct: result.metrics.win_rate_pct,
+        profit_factor: result.metrics.profit_factor,
+      };
+    }
+    return context;
+  }
+
+  function renderIdeaContext() {
+    const node = $("idea-context");
+    const settings = readSettings();
+    const result = state.selectedKey ? findResult(state.selectedKey) : null;
+    if (!result) {
+      node.innerHTML = `Wird angehängt: <strong>${settings.symbol}</strong> · ${settings.interval} · ` +
+        `ab ${settings.start}. Noch kein Backtest gelaufen.`;
+      return;
+    }
+    node.innerHTML =
+      `Wird angehängt: <strong>${result.label}</strong> auf <strong>${settings.symbol}</strong> · ` +
+      `${settings.interval} · ${settings.start} bis ${settings.end || "heute"} · ` +
+      `${fmtMoney(result.metrics.net_pnl)} · ${fmtPlain(result.metrics.max_drawdown_pct)} DD · ` +
+      `${result.metrics.trades} Trades`;
+  }
+
+  function ideaContextLine(context) {
+    if (!context || !context.symbol) return "";
+    const parts = [context.symbol, context.interval];
+    if (context.start) parts.push(`${context.start} bis ${context.end || "heute"}`);
+    if (context.strategy_label) parts.push(context.strategy_label);
+    if (context.metrics && context.metrics.net_pnl !== undefined) {
+      parts.push(fmtMoney(context.metrics.net_pnl));
+    }
+    return parts.filter(Boolean).join(" · ");
+  }
+
+  function renderIdeas(data) {
+    const list = $("idea-list");
+    list.textContent = "";
+    $("ideas-file").textContent = data.file ? `gespeichert in ${data.file}` : "";
+    $("ideas-count").textContent = data.ideas.length
+      ? `${data.open} offen · ${data.ideas.length - data.open} erledigt`
+      : "Noch nichts notiert";
+
+    data.ideas.forEach((idea) => {
+      const item = document.createElement("li");
+      item.className = "idea-item" + (idea.status === "erledigt" ? " done" : "");
+
+      const done = document.createElement("input");
+      done.type = "checkbox";
+      done.checked = idea.status === "erledigt";
+      done.title = "als erledigt markieren";
+      done.addEventListener("change", async () => {
+        renderIdeas(await api("/api/ideas/status", {
+          id: idea.id, status: done.checked ? "erledigt" : "offen",
+        }));
+      });
+
+      const body = document.createElement("div");
+      const text = document.createElement("div");
+      text.className = "idea-text";
+      text.textContent = idea.text;
+      const meta = document.createElement("div");
+      meta.className = "idea-meta";
+      meta.textContent = [String(idea.created).slice(0, 10), ideaContextLine(idea.context)]
+        .filter(Boolean).join("  ·  ");
+      body.append(text, meta);
+
+      const actions = document.createElement("div");
+      actions.className = "idea-actions";
+
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.textContent = "kopieren";
+      copy.addEventListener("click", () => copyIdea(idea));
+
+      const drop = document.createElement("button");
+      drop.type = "button";
+      drop.className = "danger";
+      drop.textContent = "löschen";
+      drop.addEventListener("click", async () => {
+        renderIdeas(await api("/api/ideas/delete", { id: idea.id }));
+      });
+
+      actions.append(copy, drop);
+      item.append(done, body, actions);
+      list.appendChild(item);
+    });
+  }
+
+  function ideaAsText(idea) {
+    const lines = [idea.text.trim(), ""];
+    const context = idea.context || {};
+    if (context.symbol) {
+      lines.push("Bezieht sich auf:");
+      lines.push(`Markt: ${[context.symbol, context.interval,
+        context.start ? `${context.start} bis ${context.end || "heute"}` : ""]
+        .filter(Boolean).join(" · ")}`);
+    }
+    if (context.strategy_label) {
+      const params = context.params || {};
+      const suffix = Object.keys(params).length
+        ? ` (${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(", ")})` : "";
+      lines.push(`Strategie: ${context.strategy_label}${suffix}`);
+    }
+    const m = context.metrics || {};
+    if (m.net_pnl !== undefined) {
+      lines.push(`Ergebnis: ${fmtMoney(m.net_pnl)} · ${fmtPercent(m.return_pct)} · ` +
+        `Max DD ${fmtPlain(m.max_drawdown_pct)} · ${m.trades} Trades`);
+    }
+    const c = context.settings || {};
+    if (c.capital !== undefined) {
+      lines.push(`Bedingungen: ${Number(c.capital).toLocaleString("de-DE")} $ Start · ` +
+        `${c.fee} % je Seite · ${c.slippage} Tick · ${c.allow_short ? "Long + Short" : "nur Long"}`);
+    }
+    return lines.join("\n").trim();
+  }
+
+  async function copyIdea(idea) {
+    const status = $("idea-status");
+    try {
+      await navigator.clipboard.writeText(ideaAsText(idea));
+      status.textContent = "kopiert — jetzt bei Claude einfügen";
+      status.classList.remove("error");
+    } catch {
+      status.textContent = "Kopieren nicht erlaubt — Text bitte markieren";
+      status.classList.add("error");
+    }
+  }
+
+  async function saveIdea(event) {
+    if (event) event.preventDefault();
+    const field = $("idea-text");
+    const status = $("idea-status");
+    const text = field.value.trim();
+    if (!text) {
+      status.textContent = "Erst etwas schreiben.";
+      status.classList.add("error");
+      return;
+    }
+    try {
+      const data = await api("/api/ideas", { text, context: currentContext() });
+      field.value = "";
+      renderIdeas(data);
+      status.textContent = "notiert";
+      status.classList.remove("error");
+    } catch (error) {
+      status.textContent = error.message;
+      status.classList.add("error");
+    }
+  }
+
+  async function loadIdeas() {
+    try {
+      renderIdeas(await api("/api/ideas"));
+    } catch (error) {
+      $("ideas-count").textContent = "Notizen konnten nicht geladen werden: " + error.message;
     }
   }
 
@@ -344,6 +534,24 @@
     buildStrategyPicker(state.catalog.strategies);
 
     $("settings").addEventListener("submit", runBacktest);
+    $("settings").addEventListener("change", renderIdeaContext);
+
+    $("idea-form").addEventListener("submit", saveIdea);
+    $("idea-copy").addEventListener("click", () => {
+      const text = $("idea-text").value.trim();
+      if (!text) {
+        $("idea-status").textContent = "Erst etwas schreiben.";
+        $("idea-status").classList.add("error");
+        return;
+      }
+      copyIdea({ text, context: currentContext() });
+    });
+    // Strg/Cmd + Enter speichert, ohne zur Maus zu greifen.
+    $("idea-text").addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") saveIdea(e);
+    });
+    renderIdeaContext();
+    loadIdeas();
 
     document.querySelectorAll(".picker-actions button").forEach((button) => {
       button.addEventListener("click", () => {

@@ -385,3 +385,70 @@ code { background: var(--surface-raised); padding: 1px 5px; border-radius: 3px; 
   .run-button { margin-left: 0; width: 100%; }
   .run-meta { text-align: left; }
 }
+
+/* ---------- Notizbuch ---------- */
+#idea-form textarea {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.6;
+  background: var(--surface-raised);
+}
+#idea-form textarea::placeholder { color: var(--ink-muted); }
+
+.idea-context {
+  margin: 9px 0 0;
+  color: var(--ink-muted);
+  font-size: 11px;
+  border-left: 2px solid var(--axis);
+  padding-left: 9px;
+}
+.idea-context strong { color: var(--ink-2); font-weight: 600; }
+
+.idea-bar { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; margin-top: 12px; }
+.idea-bar .run-button { margin-left: 0; }
+.idea-bar button[type="button"] { cursor: pointer; color: var(--ink-2); }
+.idea-bar button[type="button"]:hover { border-color: var(--series-strategy); color: var(--ink); }
+.idea-bar .status { margin: 0; }
+
+.idea-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.idea-list-head .chart-subtitle { margin-bottom: 8px; }
+
+.idea-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+.idea-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 11px;
+  align-items: start;
+  padding: 11px 13px;
+  background: var(--surface-raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+}
+.idea-item.done { opacity: 0.55; }
+.idea-item.done .idea-text { text-decoration: line-through; }
+
+.idea-item input[type="checkbox"] { margin-top: 2px; }
+.idea-text { color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.idea-meta { margin-top: 5px; color: var(--ink-muted); font-size: 10.5px; overflow-wrap: anywhere; }
+.idea-actions { display: flex; gap: 6px; }
+.idea-actions button {
+  padding: 3px 9px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.idea-actions button:hover { border-color: var(--series-strategy); color: var(--ink); }
+.idea-actions button.danger:hover { border-color: var(--critical); color: var(--critical); }
+
+@media (max-width: 620px) {
+  .idea-item { grid-template-columns: auto 1fr; }
+  .idea-actions { grid-column: 1 / -1; }
+}

@@ -123,6 +123,33 @@
     </section>
   </div>
 
+  <!-- ---------- Notizbuch ---------- -->
+  <section class="panel" id="ideas-panel" aria-labelledby="ideas-title">
+    <h2 id="ideas-title">Notizbuch — was als Nächstes?</h2>
+    <p class="hint">
+      Was dir beim Anschauen auffällt: die nächste Strategie, eine Idee zur
+      Verbesserung, ein Verdacht. Der aktuelle Lauf wird automatisch angehängt,
+      damit später klar ist, worauf sich die Notiz bezog.
+    </p>
+
+    <form id="idea-form">
+      <textarea id="idea-text" rows="3" maxlength="4000"
+        placeholder="z. B. &quot;RSI-2 braucht einen ATR-Stop — 95 Trades für 14 % Rendite lohnen sich nicht&quot; oder &quot;Nächste Strategie: Opening Range Breakout auf NQ, 15 Minuten&quot;"></textarea>
+      <p class="idea-context" id="idea-context">Kein Lauf ausgewählt.</p>
+      <div class="idea-bar">
+        <button type="submit" class="run-button" id="idea-save">Notieren</button>
+        <button type="button" id="idea-copy">Für Claude kopieren</button>
+        <span class="status" id="idea-status"></span>
+      </div>
+    </form>
+
+    <div class="idea-list-head">
+      <h3 class="chart-subtitle" id="ideas-count">Noch nichts notiert</h3>
+      <span class="hint" id="ideas-file"></span>
+    </div>
+    <ul class="idea-list" id="idea-list"></ul>
+  </section>
+
   <!-- ---------- Pine-Export ---------- -->
   <section class="panel" id="pine-panel" hidden aria-labelledby="pine-title">
     <h2 id="pine-title">TradingView — Pine Script</h2>

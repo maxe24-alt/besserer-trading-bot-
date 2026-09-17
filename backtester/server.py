@@ -6,8 +6,12 @@ Das ganze Projekt kommt damit mit pandas, numpy und requests aus.
 Endpunkte:
     GET  /                 Dashboard
     GET  /api/catalog      Strategien, Datenquellen, Kontrakte
+    GET  /api/ideas        Gespeicherte Strategie-Notizen
     POST /api/backtest     Lauf starten, Ergebnis als JSON
     POST /api/pine         Pine-Quelltext einer Strategie
+    POST /api/ideas        Notiz anlegen
+    POST /api/ideas/status Notiz auf offen/erledigt setzen
+    POST /api/ideas/delete Notiz loeschen
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from pathlib import Path
 from .data import DataError, load_bars, provider_infos
 from .engine import BacktestConfig, run_gauntlet
 from .engine.results import json_default
+from .ideas import IdeaError, add_idea_payload, delete_idea_payload, list_ideas_payload, status_idea_payload
 from .instruments import known_instruments
 from .pine import to_pine, tradingview_symbol
 from .strategies import all_keys, catalog
@@ -72,6 +77,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if path == "/api/catalog":
             self._send_json(build_catalog())
             return
+        if path == "/api/ideas":
+            self._send_json(list_ideas_payload())
+            return
         self._serve_static(path)
 
     def do_HEAD(self) -> None:
@@ -79,7 +87,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
-        routes = {"/api/backtest": handle_backtest, "/api/pine": handle_pine}
+        routes = {
+            "/api/backtest": handle_backtest,
+            "/api/pine": handle_pine,
+            "/api/ideas": add_idea_payload,
+            "/api/ideas/status": status_idea_payload,
+            "/api/ideas/delete": delete_idea_payload,
+        }
         handler = routes.get(path)
         if handler is None:
             self._send_json({"error": f"Unbekannter Endpunkt {path}"}, 404)
@@ -88,6 +102,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_json(handler(self._read_json()))
         except DataError as exc:
             self._send_json({"error": f"Daten konnten nicht geladen werden: {exc}"}, 400)
+        except IdeaError as exc:
+            self._send_json({"error": str(exc)}, 400)
         except (KeyError, ValueError) as exc:
             self._send_json({"error": str(exc)}, 400)
         except Exception as exc:  # pragma: no cover - letzte Auffanglinie
