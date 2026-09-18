@@ -360,7 +360,7 @@ und den Key in `DEFAULT_ORDER` eintragen, falls er im Gauntlet mitlaufen soll.
 python -m unittest discover -s tests -t .
 ```
 
-148 Tests, komplett offline — synthetische Kursreihen statt Downloads.
+149 Tests, komplett offline — synthetische Kursreihen statt Downloads.
 Geprüft werden unter anderem: dass Buy & Hold exakt der Kursbewegung
 entspricht, dass Einstiege zur Eröffnung der Folgebar erfolgen, dass ein
 Signal auf der letzten Bar keinen Trade mehr auslöst, dass Kennzahlen
@@ -386,7 +386,7 @@ backtester/
 web/                    Dashboard (HTML, CSS, SVG-Charts ohne Bibliothek)
 pine/                   fertig erzeugte Pine-Skripte für ES
 ideen/                  deine Notizen (entsteht beim ersten Speichern)
-tests/                  148 Tests
+tests/                  149 Tests
 ```
 
 ---

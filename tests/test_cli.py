@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import io
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -45,6 +46,33 @@ class ParserTest(unittest.TestCase):
     def test_malformed_parameter_is_rejected(self):
         with self.assertRaises(SystemExit):
             _parse_params(["fast"])
+
+    def test_all_help_texts_render(self):
+        """argparse formatiert Hilfetexte mit %-Ersetzung.
+
+        Ein einzelnes Prozentzeichen im Text bringt das zum Absturz - unter
+        Python 3.14 schon beim Anlegen des Arguments, davor erst beim
+        Ausgeben der Hilfe. Dieser Test findet es auf jeder Version.
+        """
+        parser = build_parser()
+        self.assertIn("backtester", parser.format_help())
+
+        subparsers = [
+            action for action in parser._actions
+            if isinstance(action, argparse._SubParsersAction)
+        ]
+        self.assertTrue(subparsers, "keine Unterbefehle gefunden")
+
+        seen = set()
+        for action in subparsers:
+            for name, sub in action.choices.items():
+                with self.subTest(command=name):
+                    self.assertTrue(sub.format_help())
+                    seen.add(name)
+        self.assertEqual(
+            seen,
+            {"list", "run", "gauntlet", "pine", "data", "ideas", "dashboard"},
+        )
 
     def test_config_follows_the_flags(self):
         args = build_parser().parse_args([

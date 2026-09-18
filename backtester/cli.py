@@ -40,7 +40,10 @@ def _add_config_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--capital", type=float, default=100_000.0, help="Startkapital (Vorgabe: 100000)")
     parser.add_argument("--fee", type=float, default=0.1, help="Gebuehr je Seite in Prozent (Vorgabe: 0.1)")
     parser.add_argument("--slippage", type=float, default=1.0, help="Slippage in Ticks (Vorgabe: 1)")
-    parser.add_argument("--exposure", type=float, default=1.0, help="Kapitalanteil je Position (1.0 = 100 %)")
+    # Das doppelte Prozentzeichen muss sein: argparse jagt Hilfetexte durch
+    # eine %-Formatierung, ein einzelnes %% waere ein Formatbefehl.
+    parser.add_argument("--exposure", type=float, default=1.0,
+                        help="Kapitalanteil je Position (1.0 = 100 %%)")
     parser.add_argument("--contracts", type=float, default=None, help="Feste Kontraktzahl statt Prozentgroesse")
     parser.add_argument("--allow-short", action="store_true", help="Short-Positionen zulassen")
     parser.add_argument("--no-compounding", action="store_true", help="Immer mit dem Startkapital rechnen")
