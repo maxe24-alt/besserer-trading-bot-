@@ -99,6 +99,10 @@ class Metrics:
     # ueber das Startkapital hinaus, stammt der Gewinn ueberwiegend aus dem
     # Zinseszins - und der laesst sich in der Praxis kaum so ausfuehren.
     max_position_value: float = 0.0
+    # Anteil des besten Trades am Gesamtergebnis. Liegt er nahe 100 Prozent,
+    # haengt das ganze Resultat an einem einzigen Treffer - die Regel selbst
+    # hat dann nichts bewiesen.
+    top_trade_share_pct: float = 0.0
 
     def to_dict(self) -> dict[str, float | None]:
         return {key: finite_or_none(value) for key, value in asdict(self).items()}

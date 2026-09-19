@@ -134,6 +134,7 @@ def print_detail(result: BacktestResult) -> None:
         ("Durchschnittsgewinn", money(m.avg_win)),
         ("Durchschnittsverlust", money(m.avg_loss)),
         ("Groesster Gewinn", money(m.largest_win)),
+        ("  davon am Gesamtergebnis", f"{m.top_trade_share_pct:.0f} %"),
         ("Groesster Verlust", money(m.largest_loss)),
         ("Haltedauer (Bars)", f"{m.avg_bars_held:.1f}"),
         ("Zeit im Markt", f"{m.exposure_pct:.1f} %"),

@@ -100,3 +100,31 @@ class RatioTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConcentrationTest(unittest.TestCase):
+    """Haengt das Ergebnis an einem einzigen Treffer?
+
+    Ein Anteil nahe 100 Prozent heisst: die Regel selbst hat nichts bewiesen,
+    das Resultat ist ein Glueckstreffer mit Beiwerk.
+    """
+
+    def setUp(self):
+        self.equity = curve([100_000] * 5)
+        self.positions = self.equity * 0 + 1
+
+    def test_one_trade_carries_everything(self):
+        trades = [trade(1000), trade(-20), trade(-30), trade(10)]
+        metrics = compute_metrics(curve([100_000, 100_960]), trades, self.positions, 100_000.0)
+        # 1000 von 960 netto -> ueber 100 Prozent, weil der Rest zusammen verliert.
+        self.assertGreater(metrics.top_trade_share_pct, 100)
+
+    def test_evenly_spread_result(self):
+        trades = [trade(250), trade(250), trade(250), trade(250)]
+        metrics = compute_metrics(curve([100_000, 101_000]), trades, self.positions, 100_000.0)
+        self.assertAlmostEqual(metrics.top_trade_share_pct, 25.0, places=1)
+
+    def test_no_share_without_profit(self):
+        trades = [trade(-100), trade(-50)]
+        metrics = compute_metrics(curve([100_000, 99_850]), trades, self.positions, 100_000.0)
+        self.assertEqual(metrics.top_trade_share_pct, 0.0)

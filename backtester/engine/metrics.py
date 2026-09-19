@@ -95,6 +95,9 @@ def compute_metrics(
         metrics.largest_loss = round(float(pnls.min()), 2)
         metrics.avg_bars_held = round(float(np.mean([t.bars_held for t in trades])), 1)
 
+        if metrics.net_pnl > 0:
+            metrics.top_trade_share_pct = round(float(pnls.max()) / metrics.net_pnl * 100.0, 1)
+
         gross_profit = float(wins.sum())
         gross_loss = abs(float(losses.sum()))
         if gross_loss > 0:

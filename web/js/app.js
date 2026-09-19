@@ -154,6 +154,13 @@
         note += `<br><strong>Größte Einzelposition: $${Math.round(biggest).toLocaleString("de-DE")}</strong>` +
           ` — das ist Zinseszins, nicht die Regel. Häkchen „Zinseszins“ weg für den nüchternen Wert.`;
       }
+      /* Haengt fast alles an einem Treffer, hat die Regel nichts bewiesen -
+         dann ist die Zahl Glueck und kein Ergebnis. */
+      const share = winner.metrics.top_trade_share_pct || 0;
+      if (share > 50 && winner.metrics.trades > 2) {
+        note += `<br><strong>${Math.round(share)} % davon aus einem einzigen Trade</strong>` +
+          ` — die übrigen ${winner.metrics.trades - 1} tragen kaum etwas bei.`;
+      }
       tiles.appendChild(tile(
         `Sieger — ${winner.label}`,
         fmtMoney(winner.metrics.net_pnl),

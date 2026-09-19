@@ -204,31 +204,67 @@ Weniger Rendite als Nichtstun, aber deutlich ruhiger.
 
 ## Wenn eine Zahl zu gut aussieht
 
-Ein Beispiel aus der Praxis: Supertrend auf Ethereum, 2017 bis 2026, 100.000 $
-Start — **+7.552 %**. Buy & Hold im selben Zeitraum: +694 %. Das sieht nach einer
-Goldgrube aus. Es ist aber fast vollständig der Zinseszins.
+Backtests lügen nicht — sie beantworten nur eine andere Frage, als man stellt.
+Zwei Beispiele aus echten Läufen auf Ethereum.
 
-Derselbe Lauf, nur mit abgeschaltetem Zinseszins (jede Position wird aus dem
-**Startkapital** berechnet statt aus dem aktuellen Kontostand):
+### Falle 1: der Zinseszins
 
-| | Netto P/L | Größte Einzelposition | Max DD |
-|---|---|---|---|
-| mit Zinseszins | +7.551.670 $ | **7.810.585 $** | −51,4 % |
-| ohne Zinseszins | +764.338 $ | 96.000 $ | −37,8 % |
+Supertrend auf ETH, 2017–2026, 100.000 $ Start: **+7.552 %**. Buy & Hold: +694 %.
+Derselbe Lauf mit abgeschaltetem Zinseszins (jede Position aus dem *Startkapital*
+statt aus dem laufenden Kontostand):
 
-Die Regel ist dieselbe, die Trades sind dieselben, die Trefferquote ist dieselbe.
-Der Unterschied: im ersten Fall schiebt das System am Ende **7,8 Millionen Dollar**
-in einer einzigen Order in Ethereum. Mit einem Tick Slippage gerechnet. Das ist
-keine Strategie mehr, das ist eine Exponentialfunktion.
+| | Netto P/L | Größte Einzelposition |
+|---|---|---|
+| mit Zinseszins | +7.551.670 $ | **7.810.585 $** |
+| ohne Zinseszins | +764.338 $ | 96.000 $ |
 
-Deshalb zeigt das Dashboard bei der Siegerkachel die **größte Einzelposition** an,
-sobald sie das Startkapital deutlich übersteigt — und es gibt das Häkchen
-**Zinseszins** zum Abschalten. Auf der Kommandozeile heißt das `--no-compounding`.
+Gleiche Regel, gleiche Trades, gleiche Trefferquote. Im ersten Fall schiebt das
+System am Ende **7,8 Millionen Dollar in einer Order** in Ethereum — mit einem
+Cent Slippage gerechnet. Das ist keine Strategie, das ist eine Exponentialfunktion.
 
-Als Faustregel: Wird die größte Position um ein Vielfaches größer als das
-Startkapital, ist die Renditezahl eine Rechenübung und keine Aussage darüber, wie
-gut die Regel ist. Vergleichbar wird es erst ohne Zinseszins — oder indem man
-Netto P/L und Drawdown gegen Buy & Hold hält statt die Prozentzahl allein zu lesen.
+### Falle 2: der eine Glückstreffer
+
+Golden Cross auf ETH, ohne Zinseszins: **+1.188.400 $**. Die neun Trades einzeln:
+
+| Einstieg | Ausstieg | Kurs | Faktor | Netto P/L |
+|---|---|---|---|---|
+| 2019-04-20 | 2019-09-06 | 173,73 → 174,16 | 1,00x | +49 $ |
+| 2020-02-17 | 2020-04-12 | 259,90 → 158,22 | 0,61x | −39.283 $ |
+| **2020-05-14** | **2021-08-03** | **198,90 → 2.609,40** | **13,12x** | **+1.210.495 $** |
+| 2021-08-09 | 2022-01-29 | 3.012,90 → 2.546,58 | 0,85x | −15.662 $ |
+| 2023-02-10 | 2023-09-02 | 1.546,61 → 1.628,55 | 1,05x | +5.093 $ |
+| 2023-11-22 | 2024-08-09 | 1.933,59 → 2.683,71 | 1,39x | +38.555 $ |
+| 2024-12-06 | 2025-03-02 | 3.792,22 → 2.216,51 | 0,58x | −41.710 $ |
+| 2025-07-02 | 2025-12-01 | 2.405,87 → 2.991,91 | 1,24x | +24.135 $ |
+| 2026-09-01 | 2026-09-19 | 2.466,59 → 2.637,40 | 1,07x | +6.718 $ |
+
+Ein Trade bringt **1,21 Millionen**. Die anderen acht zusammen: **−22.093 $**.
+Das Ergebnis ist ein 15-Monats-Halt durch den Kryptoboom 2020/21, garniert mit
+acht Fehlschlägen. Die Regel hat nichts bewiesen.
+
+### Was das Dashboard dazu sagt
+
+Beide Fallen werden in der Siegerkachel benannt, sobald sie zutreffen:
+
+* **Größte Einzelposition**, wenn sie das Startkapital um mehr als das Dreifache
+  übersteigt → der Gewinn kommt aus dem Zinseszins
+* **Anteil des besten Trades**, wenn er über 50 % liegt → das Ergebnis hängt an
+  einem Treffer
+
+Dazu das Häkchen **Zinseszins** zum Abschalten (`--no-compounding` auf der
+Kommandozeile). Zum Vergleich: dieselbe Kennzahl für Golden Cross auf ES liegt
+bei 33 %, für Supertrend auf ETH bei 38 % — das sind Ergebnisse, die auf mehr als
+einem Zufall stehen.
+
+### Und der Drawdown
+
+−78,1 % bei Golden Cross auf ETH, und zwar nicht dort, wo man es vermutet: Am
+26.06.2019 stand die Kurve bei 193.738 $, weil der erste Trade 94.000 $ Buchgewinn
+zeigte. Ausgestiegen wurde er mit **+49 $** — der ganze Buchgewinn war wieder weg.
+Danach kam der Corona-Crash. Vom Hoch bis zum Tief am 16.03.2020: −78,1 %.
+
+Buchgewinn ist kein Gewinn, bis er realisiert ist. Die Equity-Kurve zeigt das
+ehrlich — man muss nur hinschauen.
 
 ---
 
@@ -442,7 +478,7 @@ und den Key in `DEFAULT_ORDER` eintragen, falls er im Gauntlet mitlaufen soll.
 python -m unittest discover -s tests -t .
 ```
 
-167 Tests, komplett offline — synthetische Kursreihen statt Downloads.
+170 Tests, komplett offline — synthetische Kursreihen statt Downloads.
 Geprüft werden unter anderem: dass Buy & Hold exakt der Kursbewegung
 entspricht, dass Einstiege zur Eröffnung der Folgebar erfolgen, dass ein
 Signal auf der letzten Bar keinen Trade mehr auslöst, dass Kennzahlen
@@ -468,7 +504,7 @@ backtester/
 web/                    Dashboard (HTML, CSS, SVG-Charts ohne Bibliothek)
 pine/                   fertig erzeugte Pine-Skripte für ES
 ideen/                  deine Notizen (entsteht beim ersten Speichern)
-tests/                  167 Tests
+tests/                  170 Tests
 ```
 
 ---
