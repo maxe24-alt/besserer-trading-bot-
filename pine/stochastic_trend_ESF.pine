@@ -6,10 +6,13 @@
 // Gedacht fuer: CME_MINI:ES1!   Zeiteinheit: 1 Tag (D)
 // Gleiche Bedingungen wie im Python-Lauf: 100000.0 USD Start, 0.1 % Gebuehr je Seite, 1.0 Tick Slippage.
 //
+// Positionsgroesse: 1 Kontrakt(e) fest (E-mini S&P 500, 50 USD je Punkt).
+// Prozent vom Kapital geht bei Futures nicht: ein Kontrakt ist mehr wert
+// als das Startkapital, TradingView rundet dann auf null Kontrakte ab
+// und handelt gar nicht. Vergleichbarer Python-Lauf:
+//   python -m backtester run <strategie> --symbol ES=F --contracts 1
+//
 // Bekannte Abweichungen gegenueber der Python-Engine:
-//   Kontraktstueckelung: TradingView rundet die Positionsgroesse bei Futures auf
-//   ganze Kontrakte, die Python-Engine rechnet mit Bruchteilen. Bei kleinem
-//   Startkapital weichen die Zahlen dadurch sichtbar ab.
 //   Historie: Im TradingView-Gratisplan ist die Zahl der Bars begrenzt, ein
 //   sehr langer Intraday-Test wird dort also kuerzer ausfallen.
 //   Anlaufphase: Supertrend und Ichimoku starten in Pine minimal anders,
@@ -21,8 +24,8 @@ strategy(
      shorttitle = "Stochastik + Tr",
      overlay = false,
      initial_capital = 100000,
-     default_qty_type = strategy.percent_of_equity,
-     default_qty_value = 100.0,
+     default_qty_type = strategy.fixed,
+     default_qty_value = 1,
      commission_type = strategy.commission.percent,
      commission_value = 0.1,
      slippage = 1,
@@ -32,9 +35,17 @@ strategy(
      currency = currency.USD)
 
 // --- Zeitfenster -----------------------------------------------------
+// Standardmaessig aus: der Test laeuft ueber alles, was der Chart hergibt.
+// Ein Enddatum in der Vergangenheit wuerde sonst die juengsten Bars
+// stillschweigend ausklammern - und auf kurzen Zeiteinheiten bleibt dann
+// womoeglich gar kein Bar uebrig.
+useWindow = input.bool(false, "Zeitfenster begrenzen", group="Zeitraum")
 startDate = input.time(timestamp("01 Jan 2015 00:00 +0000"), "Backtest ab", group="Zeitraum")
 endDate = input.time(timestamp("01 Sep 2026 00:00 +0000"), "Backtest bis", group="Zeitraum")
-inWindow = time >= startDate and time <= endDate
+inWindow = not useWindow or (time >= startDate and time <= endDate)
+
+// --- Positionsgroesse -------------------------------------------------
+contracts = input.float(1, "Kontrakte je Trade", minval=0.01, step=1, group="Positionsgroesse")
 
 // --- Parameter -------------------------------------------------------
 kLen = input.int(14, "%K-Laenge", minval=2, group="Strategie")
@@ -61,10 +72,10 @@ if inWindow
     if longExit and strategy.position_size > 0
         strategy.close("Long", comment="Ausstieg")
     if longEntry and strategy.position_size <= 0
-        strategy.entry("Long", strategy.long)
+        strategy.entry("Long", strategy.long, qty = contracts)
 
 // Nach dem Zeitfenster wird glattgestellt.
-if not inWindow and strategy.position_size != 0
+if useWindow and not inWindow and strategy.position_size != 0
     strategy.close_all(comment="Zeitfenster Ende")
 
 // --- Darstellung -----------------------------------------------------

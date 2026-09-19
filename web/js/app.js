@@ -36,6 +36,25 @@
     node.classList.toggle("error", Boolean(isError));
   }
 
+  /* Nach einem Fehlschlag stehen unten noch die Zahlen des letzten
+     erfolgreichen Laufs. Ohne Hinweis liest sich das, als liesse sich
+     ueberhaupt kein neuer Backtest mehr starten. */
+  function markStale(isStale) {
+    const note = $("stale-note");
+    const run = state.run;
+    note.hidden = !isStale || !run;
+    ["tiles", "results", "pine-panel"].forEach((id) => {
+      $(id).classList.toggle("is-stale", Boolean(isStale) && Boolean(run));
+    });
+    if (isStale && run) {
+      note.innerHTML =
+        `Die Zahlen unten sind <strong>nicht</strong> vom eben versuchten Lauf — ` +
+        `sie stammen noch von <strong>${run.symbol} · ${run.interval}</strong> ` +
+        `(${Chart.shortDate(run.start)} – ${Chart.shortDate(run.end)}). ` +
+        `Einstellungen anpassen und noch einmal „Backtest starten“.`;
+    }
+  }
+
   /* ---------- Aufbau der Bedienelemente ---------- */
   function fillSelect(select, items, valueKey, labelFn, initial) {
     select.textContent = "";
@@ -494,6 +513,7 @@
         .map((s) => ({ key: s.key, label: s.label }));
       fillSelect($("pine-strategy"), pineOptions, "key", (s) => s.label);
 
+      markStale(false);
       renderMeta(run, settings);
       renderTiles(run);
       state.selectedKey = run.results.length ? run.results[0].key : null;
@@ -510,6 +530,7 @@
       );
     } catch (error) {
       setStatus(error.message, true);
+      markStale(true);
     } finally {
       button.disabled = false;
     }
@@ -535,6 +556,17 @@
 
     $("settings").addEventListener("submit", runBacktest);
     $("settings").addEventListener("change", renderIdeaContext);
+
+    /* Passt ein Feld nicht zu seinen eigenen min/max/step-Angaben, bricht der
+       Browser das Absenden ab - ohne Fehler in der Konsole und ohne dass
+       irgendetwas passiert. Das ist von aussen nicht von "kaputt" zu
+       unterscheiden, also wird es hier benannt. */
+    $("settings").addEventListener("invalid", (event) => {
+      const field = event.target;
+      const label = field.closest(".field");
+      const name = label ? label.querySelector("span").textContent : field.id;
+      setStatus(`Das Feld „${name}" ist ungültig: ${field.validationMessage}`, true);
+    }, true);
 
     $("idea-form").addEventListener("submit", saveIdea);
     $("idea-copy").addEventListener("click", () => {

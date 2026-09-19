@@ -50,9 +50,6 @@ TRADINGVIEW_SYMBOLS: dict[str, str] = {
 }
 
 KNOWN_DIFFERENCES = (
-    "Kontraktstueckelung: TradingView rundet die Positionsgroesse bei Futures auf",
-    "ganze Kontrakte, die Python-Engine rechnet mit Bruchteilen. Bei kleinem",
-    "Startkapital weichen die Zahlen dadurch sichtbar ab.",
     "Historie: Im TradingView-Gratisplan ist die Zahl der Bars begrenzt, ein",
     "sehr langer Intraday-Test wird dort also kuerzer ausfallen.",
     "Anlaufphase: Supertrend und Ichimoku starten in Pine minimal anders,",
@@ -99,6 +96,11 @@ def _pine_number(value: float | int) -> str:
     return f"{float(value):.10g}" if float(value) != int(value) else f"{float(value):.1f}"
 
 
+def _pine_qty(value: float) -> str:
+    """Kontraktzahlen ohne unnoetige Nachkommastellen: 1 statt 1.0."""
+    return str(int(value)) if float(value).is_integer() else f"{float(value):g}"
+
+
 def to_pine(
     strategy: Strategy | str,
     symbol: str = "ES=F",
@@ -136,7 +138,16 @@ def to_pine(
 
     cfg = config or BacktestConfig()
     end_ts = pd.Timestamp(end) if end is not None else pd.Timestamp.now("UTC")
+    instrument = resolve(symbol)
     tv_symbol = tradingview_symbol(symbol)
+
+    # Bei Futures muss die Groesse in Kontrakten stehen. "Prozent vom Kapital"
+    # scheitert dort: ein NQ-Kontrakt entspricht rund 600.000 USD Gegenwert,
+    # ein ES-Kontrakt rund 385.000 USD. Bei 100.000 USD Startkapital ergaeben
+    # 100 % weniger als einen ganzen Kontrakt - TradingView rundet auf null
+    # und fuehrt keinen einzigen Trade aus.
+    use_contracts = instrument.point_value > 1 or cfg.sizing == "contracts"
+    contracts = cfg.contracts if cfg.sizing == "contracts" else 1.0
 
     lines: list[str] = [
         f"//@version={PINE_VERSION}",
@@ -148,6 +159,24 @@ def to_pine(
         f"// Gleiche Bedingungen wie im Python-Lauf: {_pine_number(cfg.initial_capital)} USD Start, "
         f"{_pine_number(cfg.fee_pct)} % Gebuehr je Seite, {_pine_number(cfg.slippage_ticks)} Tick Slippage.",
         "//",
+    ]
+    if use_contracts:
+        lines += [
+            f"// Positionsgroesse: {_pine_qty(contracts)} Kontrakt(e) fest "
+            f"({instrument.name}, {_pine_qty(instrument.point_value)} USD je Punkt).",
+            "// Prozent vom Kapital geht bei Futures nicht: ein Kontrakt ist mehr wert",
+            "// als das Startkapital, TradingView rundet dann auf null Kontrakte ab",
+            "// und handelt gar nicht. Vergleichbarer Python-Lauf:",
+            f"//   python -m backtester run <strategie> --symbol {instrument.symbol} "
+            f"--contracts {_pine_qty(contracts)}",
+            "//",
+        ]
+    else:
+        lines += [
+            f"// Positionsgroesse: {_pine_number(cfg.exposure * 100)} % des Kapitals.",
+            "//",
+        ]
+    lines += [
         "// Bekannte Abweichungen gegenueber der Python-Engine:",
     ]
     lines += [f"//   {line}" for line in KNOWN_DIFFERENCES]
@@ -159,8 +188,12 @@ def to_pine(
         f'     shorttitle = "{_short_title(strategy.display_name)}",',
         f"     overlay = {str(spec.overlay).lower()},",
         f"     initial_capital = {int(cfg.initial_capital)},",
-        "     default_qty_type = strategy.percent_of_equity,",
-        f"     default_qty_value = {_pine_number(cfg.exposure * 100)},",
+        (
+            "     default_qty_type = strategy.fixed,"
+            if use_contracts
+            else "     default_qty_type = strategy.percent_of_equity,"
+        ),
+        f"     default_qty_value = {_pine_qty(contracts) if use_contracts else _pine_number(cfg.exposure * 100)},",
         "     commission_type = strategy.commission.percent,",
         f"     commission_value = {_pine_number(cfg.fee_pct)},",
         f"     slippage = {int(round(cfg.slippage_ticks))},",
@@ -170,11 +203,24 @@ def to_pine(
         "     currency = currency.USD)",
         "",
         "// --- Zeitfenster -----------------------------------------------------",
+        "// Standardmaessig aus: der Test laeuft ueber alles, was der Chart hergibt.",
+        "// Ein Enddatum in der Vergangenheit wuerde sonst die juengsten Bars",
+        "// stillschweigend ausklammern - und auf kurzen Zeiteinheiten bleibt dann",
+        "// womoeglich gar kein Bar uebrig.",
+        'useWindow = input.bool(false, "Zeitfenster begrenzen", group="Zeitraum")',
         f'startDate = input.time({_pine_timestamp(start)}, "Backtest ab", group="Zeitraum")',
         f'endDate = input.time({_pine_timestamp(end_ts)}, "Backtest bis", group="Zeitraum")',
-        "inWindow = time >= startDate and time <= endDate",
+        "inWindow = not useWindow or (time >= startDate and time <= endDate)",
         "",
     ]
+
+    if use_contracts:
+        lines += [
+            "// --- Positionsgroesse -------------------------------------------------",
+            f'contracts = input.float({_pine_qty(contracts)}, "Kontrakte je Trade", '
+            'minval=0.01, step=1, group="Positionsgroesse")',
+            "",
+        ]
 
     if spec.inputs:
         lines.append("// --- Parameter -------------------------------------------------------")
@@ -200,10 +246,11 @@ def to_pine(
     lines.append("    if longExit and strategy.position_size > 0")
     lines.append('        strategy.close("Long", comment="Ausstieg")')
     lines.append("    if longEntry and strategy.position_size <= 0")
-    lines.append('        strategy.entry("Long", strategy.long)')
+    entry_args = "strategy.long, qty = contracts" if use_contracts else "strategy.long"
+    lines.append(f'        strategy.entry("Long", {entry_args})')
     lines.append("")
     lines.append("// Nach dem Zeitfenster wird glattgestellt.")
-    lines.append("if not inWindow and strategy.position_size != 0")
+    lines.append("if useWindow and not inWindow and strategy.position_size != 0")
     lines.append('    strategy.close_all(comment="Zeitfenster Ende")')
     lines.append("")
 

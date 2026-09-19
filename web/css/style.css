@@ -452,3 +452,18 @@ code { background: var(--surface-raised); padding: 1px 5px; border-radius: 3px; 
   .idea-item { grid-template-columns: auto 1fr; }
   .idea-actions { grid-column: 1 / -1; }
 }
+
+/* ---------- Hinweis auf veraltete Zahlen ---------- */
+.stale-note {
+  margin: 0;
+  padding: 11px 14px;
+  background: rgba(250, 178, 25, 0.09);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  color: var(--warning);
+  font-size: 12px;
+}
+.stale-note strong { font-weight: 700; }
+
+/* Die alten Ergebnisse bleiben lesbar, treten aber zurueck. */
+.is-stale { opacity: 0.45; filter: saturate(0.6); }

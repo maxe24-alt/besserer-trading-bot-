@@ -62,7 +62,7 @@
         </label>
         <label class="field narrow">
           <span>Einsatz %</span>
-          <input type="number" id="exposure" value="100" min="1" max="100" step="5">
+          <input type="number" id="exposure" value="100" min="1" max="100" step="1">
         </label>
         <label class="field checkbox">
           <input type="checkbox" id="allow-short">
@@ -88,6 +88,7 @@
   </section>
 
   <!-- ---------- Kennzahlen ---------- -->
+  <p class="stale-note" id="stale-note" role="status" hidden></p>
   <section class="tiles" id="tiles" hidden aria-label="Kennzahlen"></section>
 
   <!-- ---------- Rangliste + Chart ---------- -->

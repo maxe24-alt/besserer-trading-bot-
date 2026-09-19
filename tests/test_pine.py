@@ -62,15 +62,26 @@ class StructureTest(unittest.TestCase):
             with self.subTest(strategy=key):
                 # Ausfuehrung zur naechsten Eroeffnung, nicht zum Schluss.
                 self.assertIn("process_orders_on_close = false", source)
-                # Gleiche Kosten und gleiche Positionsgroesse.
+                # Gleiche Kosten.
                 self.assertIn("initial_capital = 50000", source)
                 self.assertIn("commission_value = 0.05", source)
                 self.assertIn("slippage = 2", source)
-                self.assertIn("default_qty_type = strategy.percent_of_equity", source)
-                self.assertIn("default_qty_value = 100.0", source)
                 # Nur long, kein Pyramidisieren.
                 self.assertIn("pyramiding = 0", source)
                 self.assertNotIn("strategy.short", source)
+
+    def test_time_window_is_off_by_default(self):
+        """Sonst klammert ein Enddatum in der Vergangenheit die neuesten Bars aus.
+
+        Auf einer kurzen Zeiteinheit bleibt dann womoeglich kein einziger Bar
+        uebrig und der Strategie-Tester zeigt gar kein Ergebnis.
+        """
+        for key, source in self.sources.items():
+            with self.subTest(strategy=key):
+                self.assertIn('useWindow = input.bool(false,', source)
+                self.assertIn("inWindow = not useWindow or (time >= startDate and time <= endDate)", source)
+                self.assertIn("if useWindow and not inWindow", source)
+
 
     def test_exit_is_checked_before_entry(self):
         """Wie in hold_position: an einer Bar mit beiden Signalen wird verkauft."""
@@ -104,6 +115,57 @@ class StructureTest(unittest.TestCase):
         source = to_pine("ema_cross", start="2021-03-05", end="2024-11-20")
         self.assertIn('timestamp("05 Mar 2021 00:00 +0000")', source)
         self.assertIn('timestamp("20 Nov 2024 00:00 +0000")', source)
+
+
+class PositionSizeTest(unittest.TestCase):
+    """Futures brauchen eine Groesse in Kontrakten.
+
+    Ein NQ-Kontrakt entspricht rund 600.000 USD, ein ES-Kontrakt rund
+    385.000 USD. "100 % des Kapitals" ergibt bei 100.000 USD Startkapital
+    weniger als einen ganzen Kontrakt - TradingView rundet auf null ab und
+    fuehrt keinen einzigen Trade aus.
+    """
+
+    FUTURES = ("ES=F", "NQ=F", "MES=F", "MNQ=F", "GC=F", "CL=F")
+    NON_FUTURES = ("SPY", "QQQ", "BTC-USD", "AAPL")
+
+    def test_futures_trade_a_fixed_contract_count(self):
+        for symbol in self.FUTURES:
+            with self.subTest(symbol=symbol):
+                source = to_pine("ema_cross", symbol=symbol)
+                self.assertIn("default_qty_type = strategy.fixed", source)
+                self.assertIn("default_qty_value = 1,", source)
+                self.assertIn('contracts = input.float(1, "Kontrakte je Trade"', source)
+                self.assertIn('strategy.entry("Long", strategy.long, qty = contracts)', source)
+                self.assertNotIn("percent_of_equity", source)
+
+    def test_shares_and_crypto_keep_percent_of_equity(self):
+        for symbol in self.NON_FUTURES:
+            with self.subTest(symbol=symbol):
+                source = to_pine("ema_cross", symbol=symbol)
+                self.assertIn("default_qty_type = strategy.percent_of_equity", source)
+                self.assertIn("default_qty_value = 100.0", source)
+                self.assertIn('strategy.entry("Long", strategy.long)', source)
+                self.assertNotIn("strategy.fixed", source)
+
+    def test_explicit_contract_count_is_carried_over(self):
+        config = BacktestConfig(sizing="contracts", contracts=3)
+        for symbol in ("ES=F", "SPY"):
+            with self.subTest(symbol=symbol):
+                source = to_pine("ema_cross", symbol=symbol, config=config)
+                self.assertIn("default_qty_type = strategy.fixed", source)
+                self.assertIn("default_qty_value = 3,", source)
+                self.assertIn("--contracts 3", source)
+
+    def test_header_names_the_matching_python_command(self):
+        source = to_pine("golden_cross", symbol="NQ=F")
+        self.assertIn("--symbol NQ=F --contracts 1", source)
+        self.assertIn("E-mini Nasdaq 100, 20 USD je Punkt", source)
+
+    def test_contract_counts_have_no_trailing_decimals(self):
+        source = to_pine("ema_cross", symbol="ES=F")
+        self.assertNotIn("default_qty_value = 1.0", source)
+        self.assertNotIn("--contracts 1.0", source)
 
 
 class SymbolTest(unittest.TestCase):

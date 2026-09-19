@@ -135,11 +135,25 @@ def _yahoo_interval(interval: str) -> str:
 
 
 def _clamp_intraday(start: dt.datetime, end: dt.datetime, interval: str) -> tuple[dt.datetime, dt.datetime]:
-    """Kappt den Startzeitpunkt auf das, was Yahoo fuer das Intervall hergibt."""
+    """Kappt den Startzeitpunkt auf das, was Yahoo fuer das Intervall hergibt.
+
+    Wichtig: Yahoo misst die Grenze ab **jetzt**, nicht ab dem Ende des
+    gewuenschten Zeitraums. Wer ein Enddatum in der Vergangenheit setzt und
+    davon 60 Tage abzieht, landet ausserhalb des Archivs - Yahoo antwortet
+    dann mit HTTP 422 statt mit Daten.
+    """
     limit_days = MAX_INTRADAY_DAYS.get(interval)
     if limit_days is None:
         return start, end
-    earliest = end - dt.timedelta(days=limit_days)
+
+    earliest = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=limit_days)
+    if end <= earliest:
+        raise DataError(
+            f"Yahoo haelt {interval}-Daten nur rund {limit_days} Tage vor. Der gewaehlte "
+            f"Zeitraum endet am {end.date()} und liegt komplett davor. "
+            f"Moegliche Wege: spaeteres Enddatum, groesseres Intervall (1h reicht "
+            f"rund zwei Jahre zurueck, 1d bis ins Jahr 2000) oder Databento als Quelle."
+        )
     return (max(start, earliest), end)
 
 

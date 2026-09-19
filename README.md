@@ -50,11 +50,28 @@ keine davon verlangt eine Ausweiskopie:
 | Quelle | Konto nötig? | Was es gibt | Wofür |
 |---|---|---|---|
 | **TradingView** | E-Mail, kein Ausweis | `CME_MINI:ES1!`, `CME_MINI:NQ1!` im Strategie-Tester | **Empfehlung** — echte CME-Historie, visuell nachvollziehbar |
-| **Yahoo Finance** | **gar keins** | `ES=F`, `NQ=F` — Tagesdaten ab 2000 | Voreinstellung, läuft sofort |
+| **Yahoo Finance** | **gar keins** | `ES=F`, `NQ=F` — Tagesdaten ab 2000, Intraday nur begrenzt | Voreinstellung, läuft sofort |
 | **Databento** | E-Mail, kein Ausweis | echte CME-Bars (GLBX.MDP3), 125 $ Startguthaben | Minutendaten über viele Jahre |
 | **Stooq** | gar keins | Tagesdaten | Ersatzquelle |
 | **CSV** | — | jeder Export | Daten, die du schon hast |
 | Alpaca | E-Mail, kein Ausweis | US-Aktien/ETFs (`SPY`, `QQQ`) | **nicht nötig** — bietet keine Futures |
+
+### Wie weit Yahoo zurückreicht
+
+Yahoos Archiv für kurze Zeiteinheiten ist knapp, und die Grenze zählt **ab
+heute**, nicht ab dem gewählten Enddatum:
+
+| Zeiteinheit | reicht zurück bis |
+|---|---|
+| `1d` | Jahr 2000 |
+| `1h` | rund 2 Jahre |
+| `30m`, `15m`, `5m` | rund 60 Tage |
+| `1m` | 7 Tage |
+
+Das Programm kappt den Startzeitpunkt automatisch darauf. Liegt der **ganze**
+gewählte Zeitraum außerhalb — etwa 15-Minuten-Daten aus dem Jahr 2020 — sagt es
+das im Klartext, statt Yahoo einen Fehlercode zurückgeben zu lassen. Für lange
+Intraday-Historie ist Databento die Quelle der Wahl.
 
 ### Der empfohlene Weg: Python rechnet, TradingView prüft nach
 
@@ -80,9 +97,13 @@ ohne Ausweis. Drei Einschränkungen gibt es trotzdem:
 * **Realtime-CME kostet extra.** Die *historischen* und verzögerten Kurse sind
   gratis — zum Backtesten reicht das vollständig. Nur Live-Kurse in Echtzeit
   sind kostenpflichtig.
-* **Ganze Kontrakte.** TradingView rundet die Positionsgröße bei Futures auf
-  volle Kontrakte, die Python-Engine rechnet mit Bruchteilen. Bei 100.000 $
-  Startkapital ist der Unterschied klein, bei 5.000 $ deutlich.
+* **Ganze Kontrakte.** Futures lassen sich in TradingView nur in vollen
+  Kontrakten handeln. „100 % des Kapitals" ergibt bei ES oder NQ weniger als
+  einen Kontrakt — ein NQ-Kontrakt entspricht rund 600.000 $, ein ES-Kontrakt
+  rund 385.000 $ — und der Strategie-Tester handelt dann **gar nicht**.
+  Deshalb setzen die erzeugten Skripte bei Futures eine feste Kontraktzahl
+  (Vorgabe: 1, im Skript einstellbar). Der vergleichbare Python-Lauf dazu ist
+  `--contracts 1`. Bei Aktien und ETFs bleibt es beim Prozentanteil.
 
 Jedes erzeugte Skript trägt diese Hinweise als Kommentar im Kopf.
 
@@ -273,7 +294,13 @@ Das erzeugte Skript bildet das Ausführungsmodell der Python-Engine gezielt nach
 | `long_only = True` | nur `strategy.entry(..., strategy.long)` |
 | Ausstieg wird vor dem Einstieg geprüft | `if longExit …` steht vor `if longEntry …` |
 
-Restliche Abweichungen (Kontraktrundung, Bar-Limit, Anlaufphase von Supertrend
+Das Zeitfenster im Skript ist **standardmäßig aus** — der Test läuft über
+alles, was der Chart hergibt. Sonst würde ein Enddatum in der Vergangenheit die
+jüngsten Bars stillschweigend ausklammern, und auf einer 5-Minuten-Einstellung
+bliebe womöglich gar kein Bar übrig. Einschalten lässt es sich in den
+Skript-Einstellungen unter „Zeitfenster begrenzen".
+
+Restliche Abweichungen (Bar-Limit im Gratisplan, Anlaufphase von Supertrend
 und Ichimoku) stehen als Kommentar im Kopf jedes Skripts.
 
 ---
@@ -360,7 +387,7 @@ und den Key in `DEFAULT_ORDER` eintragen, falls er im Gauntlet mitlaufen soll.
 python -m unittest discover -s tests -t .
 ```
 
-149 Tests, komplett offline — synthetische Kursreihen statt Downloads.
+166 Tests, komplett offline — synthetische Kursreihen statt Downloads.
 Geprüft werden unter anderem: dass Buy & Hold exakt der Kursbewegung
 entspricht, dass Einstiege zur Eröffnung der Folgebar erfolgen, dass ein
 Signal auf der letzten Bar keinen Trade mehr auslöst, dass Kennzahlen
@@ -386,7 +413,7 @@ backtester/
 web/                    Dashboard (HTML, CSS, SVG-Charts ohne Bibliothek)
 pine/                   fertig erzeugte Pine-Skripte für ES
 ideen/                  deine Notizen (entsteht beim ersten Speichern)
-tests/                  149 Tests
+tests/                  166 Tests
 ```
 
 ---
