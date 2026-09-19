@@ -86,7 +86,7 @@ def run_backtest(
     if cfg.long_only:
         target = target.clip(lower=0)
 
-    equity, positions, trades, total_fees = _simulate(df, target, instrument, cfg)
+    equity, positions, trades, total_fees, max_position = _simulate(df, target, instrument, cfg)
 
     metrics = compute_metrics(
         equity=equity,
@@ -96,6 +96,7 @@ def run_backtest(
         periods_per_year=bars_per_year(df),
         risk_free_rate=cfg.risk_free_rate,
         total_fees=total_fees,
+        max_position_value=max_position,
     )
 
     return BacktestResult(
@@ -120,7 +121,7 @@ def _simulate(
     target: pd.Series,
     instrument: Instrument,
     cfg: BacktestConfig,
-) -> tuple[pd.Series, pd.Series, list[Trade], float]:
+) -> tuple[pd.Series, pd.Series, list[Trade], float, float]:
     """Der eigentliche Bar-fuer-Bar-Durchlauf."""
     opens = df["open"].to_numpy(dtype=float)
     highs = df["high"].to_numpy(dtype=float)
@@ -155,6 +156,7 @@ def _simulate(
 
     trades: list[Trade] = []
     total_fees = 0.0
+    max_position_value = 0.0
 
     def fill_price(reference: float, side: int) -> float:
         """Slippage geht immer gegen uns: Kauf teurer, Verkauf billiger."""
@@ -207,6 +209,9 @@ def _simulate(
                     entry_index = i
                     entry_fees = cost(abs(units), entry_px)
                     total_fees += entry_fees
+                    max_position_value = max(
+                        max_position_value, abs(units) * entry_px * point_value
+                    )
                     best = worst = 0.0
                 else:
                     units = 0.0
@@ -261,6 +266,7 @@ def _simulate(
         pd.Series(position_curve, index=index, name="position"),
         trades,
         total_fees,
+        max_position_value,
     )
 
 

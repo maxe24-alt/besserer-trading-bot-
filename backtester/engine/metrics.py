@@ -16,6 +16,7 @@ def compute_metrics(
     periods_per_year: float = 252.0,
     risk_free_rate: float = 0.0,
     total_fees: float = 0.0,
+    max_position_value: float = 0.0,
 ) -> Metrics:
     """Fuehrt Equity-Kurve und Trades zu einem Kennzahlensatz zusammen.
 
@@ -28,7 +29,8 @@ def compute_metrics(
         risk_free_rate: Risikoloser Zins p. a. als Dezimalzahl (0.04 = 4 %).
         total_fees: Summe aller Gebuehren.
     """
-    metrics = Metrics(total_fees=round(total_fees, 2))
+    metrics = Metrics(total_fees=round(total_fees, 2),
+                      max_position_value=round(max_position_value, 2))
     if len(equity) == 0:
         return metrics
 

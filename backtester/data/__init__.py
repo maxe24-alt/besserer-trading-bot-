@@ -97,24 +97,38 @@ def load_bars(
     return slice_range(df, start_ts, end_ts)
 
 
+def trading_days_per_year(df: pd.DataFrame) -> float:
+    """252 fuer Boersen, 365 fuer Maerkte, die auch am Wochenende laufen.
+
+    Gemessen wird am Datensatz selbst: kommen Samstage und Sonntage regelmaessig
+    vor, handelt es sich um Krypto oder einen aehnlichen Dauerbetrieb. Mit 252
+    zu rechnen wuerde dort Sharpe und Volatilitaet um rund 20 Prozent verzerren.
+    """
+    if len(df) < 30:
+        return 252.0
+    weekend_share = float((df.index.dayofweek >= 5).mean())
+    return 365.0 if weekend_share > 0.15 else 252.0
+
+
 def bars_per_year(df: pd.DataFrame) -> float:
-    """Schaetzt die Anzahl Bars pro Jahr - Basis fuer Sharpe und CAGR."""
+    """Schaetzt die Anzahl Bars pro Jahr - Basis fuer Sharpe und Volatilitaet."""
     if len(df) < 3:
         return 252.0
     median_gap = pd.Series(df.index).diff().median()
     if pd.isna(median_gap) or median_gap.total_seconds() <= 0:
         return 252.0
 
+    days = trading_days_per_year(df)
     gap_minutes = median_gap.total_seconds() / 60.0
     if gap_minutes >= 60 * 24 * 25:  # Monatsbars
         return 12.0
     if gap_minutes >= 60 * 24 * 6:  # Wochenbars
         return 52.0
     if gap_minutes >= 60 * 20:  # Tagesbars
-        return 252.0
+        return days
     # Intraday: Handelstage x Bars pro Tag, gemessen an den echten Daten.
     bars_per_day = df.groupby(df.index.date).size().median()
-    return float(252.0 * max(bars_per_day, 1))
+    return float(days * max(bars_per_day, 1))
 
 
 __all__ = [
@@ -126,6 +140,7 @@ __all__ = [
     "DataProvider",
     "ProviderInfo",
     "bars_per_year",
+    "trading_days_per_year",
     "cache",
     "get_provider",
     "load_bars",

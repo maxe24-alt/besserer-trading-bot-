@@ -137,6 +137,7 @@ def print_detail(result: BacktestResult) -> None:
         ("Groesster Verlust", money(m.largest_loss)),
         ("Haltedauer (Bars)", f"{m.avg_bars_held:.1f}"),
         ("Zeit im Markt", f"{m.exposure_pct:.1f} %"),
+        ("Groesste Position", f"${m.max_position_value:,.0f}".replace(",", ".")),
         ("Gebuehren gesamt", f"${m.total_fees:,.0f}".replace(",", ".")),
     ]
     for label, value in rows:

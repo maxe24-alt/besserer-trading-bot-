@@ -108,6 +108,7 @@
       slippage: Number($("slippage").value) || 0,
       exposure: (Number($("exposure").value) || 100) / 100,
       allow_short: $("allow-short").checked,
+      compounding: $("compounding").checked,
     };
   }
 
@@ -143,11 +144,21 @@
     const hold = run.benchmark;
 
     if (winner) {
+      let note = `${fmtPercent(winner.metrics.return_pct)} · ${winner.metrics.trades} Trades · ` +
+        `PF ${winner.metrics.profit_factor}`;
+      /* Waechst eine einzelne Position weit ueber das Startkapital hinaus,
+         stammt der Gewinn ueberwiegend aus dem Zinseszins. Das gehoert
+         dazugesagt, sonst liest sich die Zahl als Ertrag der Regel. */
+      const biggest = winner.metrics.max_position_value || 0;
+      if (biggest > run.initial_capital * 3) {
+        note += `<br><strong>Größte Einzelposition: $${Math.round(biggest).toLocaleString("de-DE")}</strong>` +
+          ` — das ist Zinseszins, nicht die Regel. Häkchen „Zinseszins“ weg für den nüchternen Wert.`;
+      }
       tiles.appendChild(tile(
         `Sieger — ${winner.label}`,
         fmtMoney(winner.metrics.net_pnl),
         winner.metrics.net_pnl >= 0 ? "good" : "bad",
-        `${fmtPercent(winner.metrics.return_pct)} · ${winner.metrics.trades} Trades · PF ${winner.metrics.profit_factor}`
+        note
       ));
     }
     if (hold) {

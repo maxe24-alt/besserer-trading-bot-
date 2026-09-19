@@ -95,6 +95,10 @@ class Metrics:
     avg_bars_held: float = 0.0
     total_fees: float = 0.0
     final_equity: float = 0.0
+    # Groesster Gegenwert einer einzelnen Position. Waechst die Zahl weit
+    # ueber das Startkapital hinaus, stammt der Gewinn ueberwiegend aus dem
+    # Zinseszins - und der laesst sich in der Praxis kaum so ausfuehren.
+    max_position_value: float = 0.0
 
     def to_dict(self) -> dict[str, float | None]:
         return {key: finite_or_none(value) for key, value in asdict(self).items()}

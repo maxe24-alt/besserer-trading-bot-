@@ -72,8 +72,19 @@ class TimezoneTest(unittest.TestCase):
 
 
 class BarsPerYearTest(unittest.TestCase):
-    def test_daily_bars(self):
-        self.assertEqual(bars_per_year(make_bars([100.0] * 100)), 252.0)
+    """Die Annualisierung muss zum Markt passen.
+
+    Eine Boerse handelt an rund 252 Tagen im Jahr, Krypto an 365. Mit der
+    falschen Zahl liegen Sharpe und Volatilitaet um rund 20 Prozent daneben.
+    """
+
+    def test_exchange_hours_use_252_days(self):
+        # Geschaeftstage, also ohne Wochenende - wie bei ES, NQ oder SPY.
+        self.assertEqual(bars_per_year(make_bars([100.0] * 300, freq="B")), 252.0)
+
+    def test_weekend_markets_use_365_days(self):
+        # Durchgehende Kalendertage - wie bei Krypto.
+        self.assertEqual(bars_per_year(make_bars([100.0] * 300, freq="D")), 365.0)
 
     def test_weekly_bars(self):
         self.assertEqual(bars_per_year(make_bars([100.0] * 60, freq="W")), 52.0)

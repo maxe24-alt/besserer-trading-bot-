@@ -178,6 +178,36 @@ Weniger Rendite als Nichtstun, aber deutlich ruhiger.
 
 ---
 
+## Wenn eine Zahl zu gut aussieht
+
+Ein Beispiel aus der Praxis: Supertrend auf Ethereum, 2017 bis 2026, 100.000 $
+Start — **+7.552 %**. Buy & Hold im selben Zeitraum: +694 %. Das sieht nach einer
+Goldgrube aus. Es ist aber fast vollständig der Zinseszins.
+
+Derselbe Lauf, nur mit abgeschaltetem Zinseszins (jede Position wird aus dem
+**Startkapital** berechnet statt aus dem aktuellen Kontostand):
+
+| | Netto P/L | Größte Einzelposition | Max DD |
+|---|---|---|---|
+| mit Zinseszins | +7.551.670 $ | **7.810.585 $** | −51,4 % |
+| ohne Zinseszins | +764.338 $ | 96.000 $ | −37,8 % |
+
+Die Regel ist dieselbe, die Trades sind dieselben, die Trefferquote ist dieselbe.
+Der Unterschied: im ersten Fall schiebt das System am Ende **7,8 Millionen Dollar**
+in einer einzigen Order in Ethereum. Mit einem Tick Slippage gerechnet. Das ist
+keine Strategie mehr, das ist eine Exponentialfunktion.
+
+Deshalb zeigt das Dashboard bei der Siegerkachel die **größte Einzelposition** an,
+sobald sie das Startkapital deutlich übersteigt — und es gibt das Häkchen
+**Zinseszins** zum Abschalten. Auf der Kommandozeile heißt das `--no-compounding`.
+
+Als Faustregel: Wird die größte Position um ein Vielfaches größer als das
+Startkapital, ist die Renditezahl eine Rechenübung und keine Aussage darüber, wie
+gut die Regel ist. Vergleichbar wird es erst ohne Zinseszins — oder indem man
+Netto P/L und Drawdown gegen Buy & Hold hält statt die Prozentzahl allein zu lesen.
+
+---
+
 ## Die Kommandozeile
 
 ```bash
@@ -204,6 +234,7 @@ Wichtige Schalter (gelten für `run`, `gauntlet` und `pine`):
 | `--exposure` | Kapitalanteil je Position | `1.0` |
 | `--contracts` | feste Kontraktzahl statt Prozentgröße | — |
 | `--allow-short` | Short-Positionen zulassen | aus |
+| `--no-compounding` | Position immer aus dem Startkapital berechnen | aus |
 
 Beispiele:
 
@@ -387,7 +418,7 @@ und den Key in `DEFAULT_ORDER` eintragen, falls er im Gauntlet mitlaufen soll.
 python -m unittest discover -s tests -t .
 ```
 
-166 Tests, komplett offline — synthetische Kursreihen statt Downloads.
+167 Tests, komplett offline — synthetische Kursreihen statt Downloads.
 Geprüft werden unter anderem: dass Buy & Hold exakt der Kursbewegung
 entspricht, dass Einstiege zur Eröffnung der Folgebar erfolgen, dass ein
 Signal auf der letzten Bar keinen Trade mehr auslöst, dass Kennzahlen
@@ -413,7 +444,7 @@ backtester/
 web/                    Dashboard (HTML, CSS, SVG-Charts ohne Bibliothek)
 pine/                   fertig erzeugte Pine-Skripte für ES
 ideen/                  deine Notizen (entsteht beim ersten Speichern)
-tests/                  166 Tests
+tests/                  167 Tests
 ```
 
 ---

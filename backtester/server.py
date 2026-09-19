@@ -165,6 +165,7 @@ def _config_from_payload(payload: dict) -> BacktestConfig:
         slippage_ticks=float(payload.get("slippage", 1.0)),
         exposure=float(payload.get("exposure", 1.0)),
         long_only=not bool(payload.get("allow_short", False)),
+        compounding=bool(payload.get("compounding", True)),
     )
 
 
