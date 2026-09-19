@@ -23,15 +23,39 @@ cd besserer-trading-bot-
 pip install -r requirements.txt
 ```
 
-Und dann jedes Mal:
+Und dann jedes Mal **ein** Befehl:
 
 ```bash
-python -m backtester dashboard
+./start.sh
 ```
 
-Der Browser öffnet sich von selbst auf <http://127.0.0.1:8000>. Beenden mit
-`Strg+C` im Terminal. Alles läuft auf deinem Rechner — nichts geht ins Netz
-außer dem Kursdownload.
+Das Skript wechselt selbst ins richtige Verzeichnis, findet eine virtuelle
+Umgebung (`.venv` im Projekt oder daneben), installiert fehlende Pakete und
+startet den Server. Es funktioniert aus jedem Ordner heraus — auch mit dem
+vollen Pfad:
+
+```bash
+~/trading-bot/besserer-trading-bot-/start.sh
+```
+
+Der Browser öffnet sich von selbst auf <http://127.0.0.1:8000>. Anderer Port:
+`./start.sh 8080`.
+
+**Das Terminal-Fenster muss offen bleiben** — es ist der Server. Beenden mit
+`Strg+C`. Für andere Befehle ein zweites Fenster öffnen.
+
+Ohne Skript geht es natürlich auch:
+
+```bash
+cd ~/trading-bot/besserer-trading-bot-     # dorthin, wo das Projekt liegt
+source ../.venv/bin/activate               # virtuelle Umgebung aktivieren
+python3 -m backtester dashboard
+```
+
+Auf macOS heißt der Befehl **`python3`**, nicht `python` — außer die virtuelle
+Umgebung ist aktiv, dann geht beides.
+
+Alles läuft auf deinem Rechner; ins Netz geht nur der Kursdownload.
 
 Ohne Browser geht es auch:
 
